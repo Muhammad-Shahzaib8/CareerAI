@@ -1,12 +1,13 @@
-from google import genai
 import os
 from dotenv import load_dotenv
+from google import genai
 
 load_dotenv()
 
 client = genai.Client(
-    api_key=os.getenv("Gemini_API_Key")
+    api_key=os.getenv("GEMINI_API_KEY")
 )
+
 
 def generate_ai_roadmap(
     country,
@@ -15,38 +16,29 @@ def generate_ai_roadmap(
     current_skills,
     missing_skills
 ):
-
     prompt = f"""
-You are an expert AI Career Advisor.
+You are a professional AI Career Advisor.
 
 Country: {country}
 Degree: {degree}
 Target Career: {career}
+Current Skills: {current_skills}
+Missing Skills: {missing_skills}
 
-Current Skills:
-{current_skills}
-
-Missing Skills:
-{missing_skills}
-
-Create a detailed 12-month roadmap.
-
-Include:
-- Monthly learning plan
-- Certifications
-- Projects
-- GitHub tasks
-- LinkedIn tasks
-- Internship strategy
-- Job strategy
-- Freelancing strategy
-
-Make it practical and professional.
+Generate a detailed 12-month roadmap.
+Include monthly learning plan, certifications, projects, GitHub tasks,
+LinkedIn tasks, internship strategy, job strategy, and freelancing strategy.
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+    except Exception:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
 
     return response.text

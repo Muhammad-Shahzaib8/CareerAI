@@ -41,3 +41,5 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+class ChatbotRequest(BaseModel):
+    message: str

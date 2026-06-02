@@ -29,7 +29,7 @@ CareerAI is an AI-powered career recommendation and roadmap generation system fo
 
 ## Project Structure
 
-```text
+
 CareerAI/
 ├── main.py
 ├── auth.py
@@ -44,20 +44,26 @@ CareerAI/
 ├── resume_recommender.py
 ├── requirements.txt
 └── README.md
-Installation
+
+
+ ## Installation
+
+
 git clone https://github.com/Muhammad-Shahzaib8/CareerAI.git
 cd CareerAI
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-Environment Variables
+## Environment Variables
 Create a .env file:
 GEMINI_API_KEY=your_gemini_api_key_here
 Run Project
 uvicorn main:app --reload
 Open:
 http://127.0.0.1:8000/docs
-Main APIs
+
+## Main APIs
+
 Method	Endpoint	Description
 POST	/register/	Register user
 POST	/login/	Login user
@@ -67,7 +73,9 @@ POST	/recommend-careers/	Recommend careers
 POST	/generate-roadmap/	Generate basic roadmap
 POST	/analyze-resume/	Upload and analyze resume
 POST	/generate-ai-roadmap/	Generate AI roadmap
-Future Enhancements
+
+## Future Enhancements
+
 React/Next.js frontend
 Admin dashboard
 Live job trend analysis
@@ -76,11 +84,9 @@ GitHub profile analyzer
 Saved roadmaps
 Payment/subscription system
 Deployment on cloud
-Author
+
+
+## Author
+
 Muhammad Shahzaib
 AI Career Roadmap Recommendation System
-Then run:
-```bash
-git add README.md
-git commit -m "Add professional README"
-git push

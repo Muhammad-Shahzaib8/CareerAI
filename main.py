@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from roadmap import generate_roadmap
 from schemas import RoadmapRequest
@@ -12,12 +13,14 @@ from ai_roadmap import generate_ai_roadmap
 from schemas import AIRoadmapRequest
 from fastapi import HTTPException
 from auth import get_current_user_email
+from schemas import ChatbotRequest
+from career_chatbot import get_career_chatbot_response
 
 from schemas import UserRegister, UserLogin
 from auth import hash_password, verify_password, create_access_token, get_current_user_email
 
 from database import Base, engine, get_db
-from models import Student, User
+from models import Student, User, SavedRoadmap, ChatHistory
 from schemas import StudentCreate, StudentResponse
 from schemas import StudentCreate, StudentResponse, RecommendationRequest
 from recommendation import recommend_careers
@@ -28,7 +31,18 @@ app = FastAPI(
     description="AI-powered career roadmap system for students",
     version="1.0.0"
 )
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
@@ -209,7 +223,8 @@ def my_profile(
 @app.post("/protected-ai-roadmap/")
 def protected_ai_roadmap(
     data: AIRoadmapRequest,
-    current_user_email: str = Depends(get_current_user_email)
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
 ):
     roadmap = generate_ai_roadmap(
         country=data.country,
@@ -219,8 +234,137 @@ def protected_ai_roadmap(
         missing_skills=data.missing_skills
     )
 
+    saved_roadmap = SavedRoadmap(
+        user_email=current_user_email,
+        country=data.country,
+        degree=data.degree,
+        career=data.career,
+        current_skills=data.current_skills,
+        missing_skills=", ".join(data.missing_skills),
+        roadmap_text=roadmap
+    )
+
+    db.add(saved_roadmap)
+    db.commit()
+    db.refresh(saved_roadmap)
+
     return {
+        "message": "AI roadmap generated and saved successfully",
+        "roadmap_id": saved_roadmap.id,
         "user": current_user_email,
         "career": data.career,
         "ai_roadmap": roadmap
+    }
+@app.get("/my-roadmaps/")
+def get_my_roadmaps(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    roadmaps = db.query(SavedRoadmap).filter(
+        SavedRoadmap.user_email == current_user_email
+    ).all()
+
+    return roadmaps
+@app.get("/roadmap/{roadmap_id}")
+def get_single_roadmap(
+    roadmap_id: int,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    roadmap = db.query(SavedRoadmap).filter(
+        SavedRoadmap.id == roadmap_id,
+        SavedRoadmap.user_email == current_user_email
+    ).first()
+
+    if not roadmap:
+        raise HTTPException(
+            status_code=404,
+            detail="Roadmap not found"
+        )
+
+    return roadmap
+@app.delete("/roadmap/{roadmap_id}")
+def delete_roadmap(
+    roadmap_id: int,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    roadmap = db.query(SavedRoadmap).filter(
+        SavedRoadmap.id == roadmap_id,
+        SavedRoadmap.user_email == current_user_email
+    ).first()
+
+    if not roadmap:
+        raise HTTPException(
+            status_code=404,
+            detail="Roadmap not found"
+        )
+
+    db.delete(roadmap)
+    db.commit()
+
+    return {
+        "message": "Roadmap deleted successfully"
+    }
+
+@app.post("/career-chatbot/")
+def career_chatbot(
+    data: ChatbotRequest,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    reply = get_career_chatbot_response(
+        user_email=current_user_email,
+        message=data.message
+    )
+
+    new_chat = ChatHistory(
+        user_email=current_user_email,
+        question=data.message,
+        answer=reply
+    )
+
+    db.add(new_chat)
+    db.commit()
+    db.refresh(new_chat)
+
+    return {
+        "message": "Chat response generated and saved successfully",
+        "chat_id": new_chat.id,
+        "user": current_user_email,
+        "question": data.message,
+        "reply": reply
+    }
+@app.get("/my-chat-history/")
+def get_my_chat_history(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    chats = db.query(ChatHistory).filter(
+        ChatHistory.user_email == current_user_email
+    ).all()
+
+    return chats
+@app.delete("/chat/{chat_id}")
+def delete_chat(
+    chat_id: int,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    chat = db.query(ChatHistory).filter(
+        ChatHistory.id == chat_id,
+        ChatHistory.user_email == current_user_email
+    ).first()
+
+    if not chat:
+        raise HTTPException(
+            status_code=404,
+            detail="Chat not found"
+        )
+
+    db.delete(chat)
+    db.commit()
+
+    return {
+        "message": "Chat deleted successfully"
     }
