@@ -11,9 +11,10 @@ from schemas import ResumeCareerRequest
 from ai_roadmap import generate_ai_roadmap
 from schemas import AIRoadmapRequest
 from fastapi import HTTPException
+from auth import get_current_user_email
 
 from schemas import UserRegister, UserLogin
-from auth import hash_password, verify_password, create_access_token
+from auth import hash_password, verify_password, create_access_token, get_current_user_email
 
 from database import Base, engine, get_db
 from models import Student, User
@@ -184,4 +185,42 @@ def login_user(user: UserLogin, db: Session = Depends(get_db)):
         "message": "Login successful",
         "access_token": token,
         "token_type": "bearer"
+    }
+@app.get("/my-profile/")
+def my_profile(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "email": user.email
+    }
+@app.post("/protected-ai-roadmap/")
+def protected_ai_roadmap(
+    data: AIRoadmapRequest,
+    current_user_email: str = Depends(get_current_user_email)
+):
+    roadmap = generate_ai_roadmap(
+        country=data.country,
+        degree=data.degree,
+        career=data.career,
+        current_skills=data.current_skills,
+        missing_skills=data.missing_skills
+    )
+
+    return {
+        "user": current_user_email,
+        "career": data.career,
+        "ai_roadmap": roadmap
     }
