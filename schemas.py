@@ -43,3 +43,6 @@ class UserLogin(BaseModel):
     password: str
 class ChatbotRequest(BaseModel):
     message: str
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str

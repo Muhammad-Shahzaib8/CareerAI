@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from auth import get_current_user_email
 from schemas import ChatbotRequest
 from career_chatbot import get_career_chatbot_response
+from schemas import ChangePasswordRequest
 
 from schemas import UserRegister, UserLogin
 from auth import hash_password, verify_password, create_access_token, get_current_user_email
@@ -367,4 +368,50 @@ def delete_chat(
 
     return {
         "message": "Chat deleted successfully"
+    }
+@app.post("/change-password/")
+def change_password(
+    data: ChangePasswordRequest,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if not verify_password(data.old_password, user.password):
+        raise HTTPException(
+            status_code=400,
+            detail="Old password is incorrect"
+        )
+
+    user.password = hash_password(data.new_password)
+
+    db.commit()
+
+    return {
+        "message": "Password changed successfully"
+    }
+@app.get("/dashboard-stats/")
+def dashboard_stats(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    roadmap_count = db.query(SavedRoadmap).filter(
+        SavedRoadmap.user_email == current_user_email
+    ).count()
+
+    chat_count = db.query(ChatHistory).filter(
+        ChatHistory.user_email == current_user_email
+    ).count()
+
+    return {
+        "roadmaps": roadmap_count,
+        "chats": chat_count
     }

@@ -20,6 +20,13 @@ Student Question:
 
 Give a practical, detailed, and student-friendly answer.
 
+IMPORTANT:
+- Do not use Markdown.
+- Do not use #, ##, ### headings.
+- Do not use **bold** formatting.
+- Do not use bullet symbols like *, -, or •.
+- Write in clean professional paragraphs.
+- Use plain readable English suitable for a web application.
 Focus on:
 - Career roadmap
 - Skills
