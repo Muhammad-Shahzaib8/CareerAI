@@ -158,11 +158,14 @@ def register_user(user: UserRegister, db: Session = Depends(get_db)):
             status_code=400,
             detail="Email already registered"
         )
+    admin_email = os.getenv("ADMIN_EMAIL")
 
+    role = "admin" if user.email == admin_email else "user"
     new_user = User(
         full_name=user.full_name,
         email=user.email,
-        password=hash_password(user.password)
+        password=hash_password(user.password),
+        role=role
     )
 
     db.add(new_user)
@@ -414,4 +417,139 @@ def dashboard_stats(
     return {
         "roadmaps": roadmap_count,
         "chats": chat_count
+    }
+@app.get("/profile-stats/")
+def profile_stats(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    roadmap_count = db.query(SavedRoadmap).filter(
+        SavedRoadmap.user_email == current_user_email
+    ).count()
+
+    chat_count = db.query(ChatHistory).filter(
+        ChatHistory.user_email == current_user_email
+    ).count()
+
+    return {
+        "full_name": user.full_name,
+        "email": user.email,
+        "role": user.role,
+        "member_since": user.created_at,
+        "roadmaps": roadmap_count,
+        "chats": chat_count
+    }
+@app.get("/admin/stats/")
+def admin_stats(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    current_user = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    total_users = db.query(User).count()
+    total_roadmaps = db.query(SavedRoadmap).count()
+    total_chats = db.query(ChatHistory).count()
+
+    return {
+        "total_users": total_users,
+        "total_roadmaps": total_roadmaps,
+        "total_chats": total_chats
+    }
+@app.get("/admin/users/")
+def admin_users(
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    current_user = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    users = db.query(User).all()
+
+    return users
+@app.delete("/admin/users/{user_id}")
+def delete_user_by_admin(
+    user_id: int,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    current_user = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not current_user or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.email == current_user_email:
+        raise HTTPException(status_code=400, detail="Admin cannot delete own account")
+
+    db.delete(user)
+    db.commit()
+
+    return {"message": "User deleted successfully"}
+@app.put("/admin/change-role/{user_id}")
+def change_user_role(
+    user_id: int,
+    current_user_email: str = Depends(get_current_user_email),
+    db: Session = Depends(get_db)
+):
+    admin = db.query(User).filter(
+        User.email == current_user_email
+    ).first()
+
+    if not admin or admin.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    user = db.query(User).filter(
+        User.id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if user.email == current_user_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot change your own role"
+        )
+
+    user.role = "admin" if user.role == "user" else "user"
+
+    db.commit()
+
+    return {
+        "message": "Role updated",
+        "new_role": user.role
     }

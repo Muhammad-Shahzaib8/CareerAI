@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String
 from database import Base
-
+from datetime import datetime
+from sqlalchemy import DateTime
 
 class Student(Base):
     __tablename__ = "students"
@@ -14,11 +15,13 @@ class Student(Base):
     interest = Column(String, nullable=False)
 class User(Base):
     __tablename__ = "users"
-
+    role = Column(String, default="user")
+    created_at = Column(DateTime, default=datetime.utcnow)
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
+    role = Column(String, default="user")
 class SavedRoadmap(Base):
     __tablename__ = "saved_roadmaps"
 

@@ -28,6 +28,16 @@ Missing Skills: {missing_skills}
 Generate a detailed 12-month roadmap.
 Include monthly learning plan, certifications, projects, GitHub tasks,
 LinkedIn tasks, internship strategy, job strategy, and freelancing strategy.
+
+IMPORTANT:
+- Do NOT use Markdown.
+- Do NOT use #, ##, ### headings.
+- Do NOT use **bold** formatting.
+- Do NOT use bullet symbols like *, -, •.
+- Use proper English.
+- Use numbered sections instead.
+- Format the roadmap for a professional web application.
+- Write clear paragraphs.
 """
 
     try:
@@ -41,4 +51,4 @@ LinkedIn tasks, internship strategy, job strategy, and freelancing strategy.
             contents=prompt
         )
 
-    return response.text
+        return response.text
