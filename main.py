@@ -8,6 +8,7 @@ import shutil
 from fastapi import UploadFile, File
 from resume_analyzer import analyze_resume
 from resume_recommender import recommend_from_resume
+from resume_ai_analyzer import analyze_resume_with_ai
 from schemas import ResumeCareerRequest
 from ai_roadmap import generate_ai_roadmap
 from schemas import AIRoadmapRequest
@@ -16,7 +17,7 @@ from auth import get_current_user_email
 from schemas import ChatbotRequest
 from career_chatbot import get_career_chatbot_response
 from schemas import ChangePasswordRequest
-
+from fastapi import Form
 from schemas import UserRegister, UserLogin
 from auth import hash_password, verify_password, create_access_token, get_current_user_email
 
@@ -101,7 +102,10 @@ def create_roadmap(data: RoadmapRequest):
         "roadmap": roadmap
     }
 @app.post("/analyze-resume/")
-def upload_resume(file: UploadFile = File(...)):
+def upload_resume(
+    country: str = Form(...),
+    file: UploadFile = File(...)
+):
     upload_folder = "uploaded_resumes"
 
     if not os.path.exists(upload_folder):
@@ -112,26 +116,25 @@ def upload_resume(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    result = analyze_resume(file_path)
+    basic_analysis = analyze_resume(file_path)
 
-    return {
-        "filename": file.filename,
-        "analysis": result
-    }
-@app.post("/resume-career-analysis/")
-def resume_career_analysis(data: ResumeCareerRequest):
-
-    recommendations = recommend_from_resume(
-        data.country,
-        data.degree,
-        data.skills
+    ai_analysis = analyze_resume_with_ai(
+        country=country,
+        education=basic_analysis.get("education", []),
+        experience=basic_analysis.get("experience", []),
+        extracted_skills=basic_analysis.get("extracted_skills", [])
     )
 
     return {
-        "country": data.country,
-        "degree": data.degree,
-        "recommendations": recommendations
+        "filename": file.filename,
+        "country": country,
+        "education": basic_analysis.get("education", []),
+        "experience": basic_analysis.get("experience", []),
+        "extracted_skills": basic_analysis.get("extracted_skills", []),
+        "total_skills_found": basic_analysis.get("total_skills_found", 0),
+        "ai_analysis": ai_analysis
     }
+
 @app.post("/generate-ai-roadmap/")
 def create_ai_roadmap(data: AIRoadmapRequest):
 
@@ -552,4 +555,37 @@ def change_user_role(
     return {
         "message": "Role updated",
         "new_role": user.role
+    }
+@app.post("/analyze-resume/")
+def upload_resume(
+    country: str = Form(...),
+    file: UploadFile = File(...)
+):
+    upload_folder = "uploaded_resumes"
+
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+
+    file_path = os.path.join(upload_folder, file.filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    basic_analysis = analyze_resume(file_path)
+
+    ai_analysis = analyze_resume_with_ai(
+        country=country,
+        education=basic_analysis.get("education", []),
+        experience=basic_analysis.get("experience", []),
+        extracted_skills=basic_analysis.get("extracted_skills", [])
+    )
+
+    return {
+        "filename": file.filename,
+        "country": country,
+        "education": basic_analysis.get("education", []),
+        "experience": basic_analysis.get("experience", []),
+        "extracted_skills": basic_analysis.get("extracted_skills", []),
+        "total_skills_found": basic_analysis.get("total_skills_found", 0),
+        "ai_analysis": ai_analysis
     }
